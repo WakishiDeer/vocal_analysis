@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import scipy.io.wavfile
 
@@ -71,7 +70,7 @@ class Audio:
             rate (int): Sample rate of WAV file.
         """
         # read audio file
-        rate, data = scipy.io.wavfile.read(wav_file_name="")
+        rate, data = scipy.io.wavfile.read(wav_file_name)
         self.sample_rate = rate
         # vertically normalize amplitude from -1 to 1
         self.audio_data = data / 2 ** (16 - 1)
