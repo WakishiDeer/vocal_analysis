@@ -4,8 +4,6 @@ channels:
   - conda-forge
 dependencies:
   - _libgcc_mutex=0.1
-  - _openmp_mutex=4.5
-  - alsa-lib=1.2.3
   - blas=1.0
   - bzip2=1.0.8
   - ca-certificates=2021.10.8
@@ -14,9 +12,6 @@ dependencies:
   - intel-openmp=2021.4.0
   - ld_impl_linux-64=2.35.1
   - libffi=3.3
-  - libgcc-ng=9.3.0
-  - libgomp=9.3.0
-  - libstdcxx-ng=9.3.0
   - libuuid=1.0.3
   - mkl=2021.4.0
   - mkl-service=2.4.0
