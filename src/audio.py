@@ -1,7 +1,6 @@
 import numpy as np
 from scipy.io import wavfile
 import sounddevice as sd
-from profile import Profile
 from logger import Logger
 
 

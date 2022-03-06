@@ -15,6 +15,11 @@ class AudioPlotter:
 
     def __init__(self, audio_stream):
         self._audio_stream = audio_stream
+        # plot setting
+        self.window = 2000.0
+        self.interval = 30.0
+        self.samplerate = 48000.0
+        self.channels = [1]  # input channels to plot
         self.lines = None
         self.plot_data = None
 
@@ -42,13 +47,13 @@ class AudioPlotter:
         return self.lines
 
     def start_plot(self):
-        length = int(self.audio_stream.window * self.audio_stream.samplerate / (1000 * self.audio_stream.down_sample))
-        self.plot_data = np.zeros((length, len(self.audio_stream.channels)))
+        length = int(self.window * self.samplerate / (1000 * self.audio_stream.down_sample))
+        self.plot_data = np.zeros((length, len(self.channels)))
         fig, ax = plt.subplots()
         self.lines = ax.plot(self.plot_data)
-        if len(self.audio_stream.channels) > 1:
-            ax.legend(['channel {}'.format(c) for c in self.audio_stream.channels],
-                      loc='lower left', ncol=len(self.audio_stream.channels))
+        if len(self.channels) > 1:
+            ax.legend(['channel {}'.format(c) for c in self.channels],
+                      loc='lower left', ncol=len(self.channels))
         ax.axis((0, len(self.plot_data), -1, 1))
         ax.set_yticks([0])
         ax.yaxis.grid(True)
@@ -57,6 +62,6 @@ class AudioPlotter:
         fig.tight_layout(pad=0)
 
         self.audio_stream.stream = self.audio_stream.get_input_stream()
-        ani = FuncAnimation(fig, self.update_plot, interval=self.audio_stream.interval, blit=True)
+        ani = FuncAnimation(fig, self.update_plot, interval=self.interval, blit=True)
         with self.audio_stream.stream:
             plt.show()

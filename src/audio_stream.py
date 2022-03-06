@@ -21,15 +21,7 @@ class AudioStream(Audio):
         super().__init__()
         # setting for input device
         self.set_input_device()
-
-        self.duration = 5.0
-        self.window = 200.0
-        self.interval = 30.0
-        self.block_size = 0
-        self.samplerate = 44100.0
-        self.down_sample = 10
-        self.channels = [1]
-        # self.mapping
+        self.down_sample = 20
         self.buffer = queue.Queue()
         self.stream = None
 
@@ -38,8 +30,11 @@ class AudioStream(Audio):
         This callback will be called from each audio block.
         """
         if status:
-            print(status, file=sys.stderr)
-        self.buffer.put(indata[::self.down_sample])
+            print("status: ", status, file=sys.stderr)
+        # self.buffer.put(indata[::self.down_sample])
+        self.buffer.put(indata[:])
+        # with self.buffer.mutex:
+        #     print(self.buffer.queue)
 
     def get_input_stream(self):
         return sd.InputStream(
