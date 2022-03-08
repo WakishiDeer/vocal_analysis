@@ -47,9 +47,10 @@ class Main:
             pass
         elif Profile.args.stream:
             self.logger.logger.info("Start streaming and plotting.")
-            self.audio_plotter.start_plot()
+            self.audio_plotter.start_plot_amplitude()
+            self.audio_plotter.start_plot_f0()
         else:
-            self.logger.logger.error("Invalid mode.")
+            self.logger.logger.error("Invalid mode selection.")
 
     @property
     def audio_stream(self):

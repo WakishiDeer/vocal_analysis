@@ -1,3 +1,4 @@
+import pprint
 import queue
 import sys
 
@@ -19,25 +20,34 @@ class AudioStream(Audio):
         Initialize sound device to decide which one to select for audio stream.
         """
         super().__init__()
+
         # setting for input device
         self.set_input_device()
         self.down_sample = 20
         self.buffer = queue.Queue()
+        self.block_size = int(sd.default.samplerate * 1)  # number of frames per callback
         self.stream = None
 
     def audio_callback(self, indata: np.ndarray, frames: int, time, status):
         """
         This callback will be called from each audio block.
+        Args:
+            indata (np.ndarray): This is audio data whose shape will be (`self.block_size`, `sd.default.channels[0]`).
+            frames:
+            time:
+            status:
         """
         if status:
             print("status: ", status, file=sys.stderr)
-        # self.buffer.put(indata[::self.down_sample])
-        self.buffer.put(indata[:])
+        # display number of buffer
+        self.buffer.put(indata[::self.down_sample])
         # with self.buffer.mutex:
-        #     print(self.buffer.queue)
+        #     print(len(self.buffer.queue))
+        self.calc_f0(indata)
 
     def get_input_stream(self):
         return sd.InputStream(
             device=sd.default.device[0],
-            callback=self.audio_callback
+            callback=self.audio_callback,
+            blocksize=self.block_size
         )

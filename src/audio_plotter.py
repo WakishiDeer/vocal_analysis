@@ -3,6 +3,7 @@ import queue
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
+import sounddevice as sd
 
 
 class AudioPlotter:
@@ -18,7 +19,7 @@ class AudioPlotter:
         # plot setting
         self.window = 2000.0
         self.interval = 30.0
-        self.samplerate = 48000.0
+        self.samplerate = sd.default.samplerate
         self.channels = [1]  # input channels to plot
         self.lines = None
         self.plot_data = None
@@ -46,7 +47,7 @@ class AudioPlotter:
             line.set_ydata(self.plot_data[:, column])
         return self.lines
 
-    def start_plot(self):
+    def start_plot_amplitude(self):
         length = int(self.window * self.samplerate / (1000 * self.audio_stream.down_sample))
         self.plot_data = np.zeros((length, len(self.channels)))
         fig, ax = plt.subplots()
@@ -65,3 +66,11 @@ class AudioPlotter:
         ani = FuncAnimation(fig, self.update_plot, interval=self.interval, blit=True)
         with self.audio_stream.stream:
             plt.show()
+
+    def start_plot_f0(self):
+        """
+        Todo: Implement
+        Returns:
+
+        """
+        pass
