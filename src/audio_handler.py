@@ -47,8 +47,16 @@ class AudioPlotter:
             line.set_ydata(self.plot_data[:, column])
         return self.lines
 
+    def start_input(self):
+        """
+        This method just input and does not plot anything.
+        Returns:
+
+        """
+
     def start_plot_amplitude(self):
-        length = int(self.window * self.samplerate / (1000 * self.audio_stream.down_sample))
+        # plot setting
+        length = int(self.window * self.samplerate / (1000 * self.audio_stream.DOWN_SAMPLE))
         self.plot_data = np.zeros((length, len(self.channels)))
         fig, ax = plt.subplots()
         self.lines = ax.plot(self.plot_data)
@@ -62,6 +70,7 @@ class AudioPlotter:
                        right='off', left='off', labelleft='off')
         fig.tight_layout(pad=0)
 
+        # stream setting
         self.audio_stream.stream = self.audio_stream.get_input_stream()
         ani = FuncAnimation(fig, self.update_plot, interval=self.interval, blit=True)
         with self.audio_stream.stream:
@@ -71,6 +80,5 @@ class AudioPlotter:
         """
         Todo: Implement
         Returns:
-
         """
         pass
