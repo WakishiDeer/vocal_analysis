@@ -11,3 +11,8 @@ class NoInputDeviceException(Exception):
 class InvalidInputDeviceChannelsException(Exception):
     def __init__(self, message):
         super(InvalidInputDeviceChannelsException, self).__init__(message)
+
+
+class DefaultInputDeviceException(Exception):
+    def __init__(self, message):
+        super(DefaultInputDeviceException, self).__init__(message)

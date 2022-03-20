@@ -4,9 +4,10 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
 import sounddevice as sd
+from logger import Logger
 
 
-class AudioPlotter:
+class AudioHandler:
     """
     This class contains realtime audio controller such as matplotlib.
     Args:
@@ -23,6 +24,9 @@ class AudioPlotter:
         self.channels = [1]  # input channels to plot
         self.lines = None
         self.plot_data = None
+
+        # Logger.setting
+        self.logger = Logger(name=__name__)
 
     @property
     def audio_stream(self):
@@ -47,12 +51,21 @@ class AudioPlotter:
             line.set_ydata(self.plot_data[:, column])
         return self.lines
 
-    def start_input(self):
+    def start_input(self, is_buffer=False):
         """
         This method just input and does not plot anything.
         Returns:
-
         """
+        if is_buffer:
+            self.audio_stream.stream = self.audio_stream.get_input_stream_raw()
+            self.logger.logger.info("Streaming with buffer mode.")
+        else:
+            self.audio_stream.stream = self.audio_stream.get_input_stream_numpy()
+            self.logger.logger.info("Streaming with numpy mode.")
+        # start streaming
+        with self.audio_stream.stream:
+            self.logger.logger.info("Steaming...")
+            input("If you want to exit, please put any.")  # wait for keyboard
 
     def start_plot_amplitude(self):
         # plot setting
@@ -71,7 +84,7 @@ class AudioPlotter:
         fig.tight_layout(pad=0)
 
         # stream setting
-        self.audio_stream.stream = self.audio_stream.get_input_stream()
+        self.audio_stream.stream = self.audio_stream.get_input_stream_numpy()
         ani = FuncAnimation(fig, self.update_plot, interval=self.interval, blit=True)
         with self.audio_stream.stream:
             plt.show()
