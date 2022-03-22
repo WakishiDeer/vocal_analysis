@@ -65,6 +65,7 @@ class AudioHandler:
         # start streaming
         with self.audio_stream.stream:
             self.logger.logger.info("Steaming...")
+            self.logger.logger.info("Starting voice activity detection.")
             input("If you want to exit, please put any.")  # wait for keyboard
 
     def start_plot_amplitude(self):

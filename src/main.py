@@ -3,7 +3,7 @@ from audio_handler import AudioHandler
 from audio_manipulator import AudioManipulator
 from profile import Profile
 from logger import Logger
-import pyannote.features.shennong
+
 
 class Main:
     """
@@ -21,7 +21,7 @@ class Main:
         # instances for each audio class
         self._audio_stream = None
         self._audio_handler = None
-        self.audio_manipulator = AudioManipulator()
+        self._audio_manipulator = AudioManipulator()
 
         # Logger setting
         self.logger = Logger(name=__name__)

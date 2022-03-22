@@ -1,6 +1,7 @@
 import numpy as np
 import sounddevice as sd
 import pyworld as pw
+import re
 
 from profile import Profile
 from logger import Logger
@@ -16,7 +17,6 @@ class AudioManipulator:
         self.logger = Logger(name=__name__)
 
         # for audio device setting
-        import re
         self.pattern = re.compile("\\S+")
         self.INPUT_SAMPLE_RATE = None
         self.VAD_DURATION = 10  # ms
@@ -62,6 +62,8 @@ class AudioManipulator:
     def set_default(self, device_index: int, devices: sd.DeviceList):
         """
         Set default of sound device.
+        Notes:
+            Output parameters won't be changed in this method.
         Args:
             device_index:
             devices:
@@ -126,10 +128,14 @@ class AudioManipulator:
 
     def voice_activity_detection(self, audio_data: np.ndarray = None, audio_buf=None):
         """
-        VAD
+        Do VAD with `shennong`, library for voice feature extraction.
+        Notes:
+            To default, the length of `audio_data` should be xx msec.
+        Args:
+            audio_data (np.ndarray): the target audio data, which length is usually
         Returns:
         """
-        self.logger.logger.info("Starting voice activity detection.")
+        pass
 
     def calc_normalization(self, audio_data: np.ndarray):
         """
