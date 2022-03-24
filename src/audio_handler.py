@@ -67,6 +67,8 @@ class AudioHandler:
             self.logger.logger.info("Steaming...")
             self.logger.logger.info("Starting voice activity detection.")
             input("If you want to exit, please put any.")  # wait for keyboard
+            import time
+            time.sleep(100)
 
     def start_plot_amplitude(self):
         # plot setting

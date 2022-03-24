@@ -1,6 +1,11 @@
+import pprint
+
 import numpy as np
 import sounddevice as sd
 import pyworld as pw
+import shennong
+from shennong.processor.mfcc import MfccProcessor
+from shennong.postprocessor.vad import VadPostProcessor
 import re
 
 from profile import Profile
@@ -19,7 +24,6 @@ class AudioManipulator:
         # for audio device setting
         self.pattern = re.compile("\\S+")
         self.INPUT_SAMPLE_RATE = None
-        self.VAD_DURATION = 10  # ms
 
     def get_devices(self):
         # session for listing audio device
@@ -132,14 +136,49 @@ class AudioManipulator:
         Notes:
             To default, the length of `audio_data` should be xx msec.
         Args:
-            audio_data (np.ndarray): the target audio data, which length is usually
+            audio_buf:
+            audio_data (np.ndarray): the target audio data.
         Returns:
         """
-        pass
+        # calc mfcc, passing normalized audio data
+        mfcc = self.calc_mfcc(audio_data=audio_data)
+        processor = VadPostProcessor()
+        vad = processor.process(features=mfcc)
+        # print!
+        # print(np.mean(mfcc.data))
+        nframes = mfcc.shape[0]
+        nvoiced = sum(vad.data[vad.data == 1])
+        print('{} voiced frames out of {}'.format(nvoiced, nframes))
+
+    def calc_mfcc(self, audio_data: np.ndarray = None, window_type: str = "hanning"):
+        """
+        Calc mfcc, audio feature, and return it.
+        Notes:
+            For `audio_data`, whose range of value should be from -1 to 1 if dtype of np.ndarray is np.float32
+            or np.float64.
+            For more detail, please refer to https://docs.cognitive-ml.fr/shennong/python/audio.html
+        Args:
+            audio_data (np.ndarray): the target audio data, which length is usually 25msec.
+            window_type: which window you want to use {"hamming", "hanning", "povey", "rectangular", "blackman"}
+        Returns:
+            res (shennong.features.Features):calculated mfcc data.
+        """
+        processor = MfccProcessor(sample_rate=self.INPUT_SAMPLE_RATE, frame_length=0.025)
+        processor.window_type = window_type
+        processor.low_freq = 20
+        processor.high_freq = 7800
+        processor.use_energy = False
+
+        audio = shennong.Audio(data=audio_data, sample_rate=self.INPUT_SAMPLE_RATE)
+        print(np.mean(audio.data))
+        res = processor.process(signal=audio)  # calc mfcc
+        return res
 
     def calc_normalization(self, audio_data: np.ndarray):
         """
         Normalization for audio array.
+        Notes:
+            DO NOT use with streaming data, because range is calculated for each block of audio.
         Returns:
             res (np.ndarray): Normalized data from -1 to 1
         """
