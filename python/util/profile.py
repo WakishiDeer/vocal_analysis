@@ -1,4 +1,7 @@
 class Profile:
+    """
+    Store values.
+    """
     args = None
     is_input_device_set = False
 

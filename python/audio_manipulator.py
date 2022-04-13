@@ -1,32 +1,34 @@
-import pprint
-
 import numpy as np
-import sounddevice as sd
 import pyworld as pw
+import auditok
 import shennong
 from shennong.processor.mfcc import MfccProcessor
+from shennong.postprocessor.cmvn import CmvnPostProcessor
 from shennong.postprocessor.vad import VadPostProcessor
+
 import re
 
-from profile import Profile
-from logger import Logger
+from util.profile import Profile
+from util.logger import Logger
+from util.exception import *
+from util import sd
 
 
 class AudioManipulator:
     """
-    This class calc audio features and initialize related devices.
-    Device information and parameter to calc audio are written here.
+    This class calc audio_util features and initialize related devices.
+    Device information and parameter to calc audio_util are written here.
     """
 
     def __init__(self):
         self.logger = Logger(name=__name__)
 
-        # for audio device setting
+        # for audio_util device setting
         self.pattern = re.compile("\\S+")
         self.INPUT_SAMPLE_RATE = None
 
     def get_devices(self):
-        # session for listing audio device
+        # session for listing audio_util device
         devices = sd.query_devices()
         input_device = sd.query_devices(kind="input")  # returns available dict of input device
         return devices, input_device
@@ -41,7 +43,7 @@ class AudioManipulator:
         # session for interactive input
         while True:
             # wait for user input
-            device_candidate = input("Enter the device name or index you want to use: ")
+            device_candidate = input("Enter the device name or index you want to use: \n")
             if self.pattern.match(device_candidate) is None:
                 # if not found, repeat input
                 self.logger.logger.info("On device selecting, {} is invalid name or index.".format(device_candidate))
@@ -75,7 +77,7 @@ class AudioManipulator:
         """
         # default setting for sounddevice
         sd.default.device = (device_index, sd.default.device[1])
-        # set reduced sample rate or default
+        # set reduced sample rate or default one
         if Profile.args.down_input_sample_rate:
             sd.default.samplerate = 16000
         else:
@@ -97,8 +99,6 @@ class AudioManipulator:
         pprint.pprint(devices)  # show all devices (includes both input and output ones)
         pprint.pprint(input_device)  # show only selected input device
 
-        from exception import NoInputDeviceException
-        from exception import InputDeviceNotFoundException
         try:
             # exit if not input device exist, otherwise proceed
             is_exist = self.is_device_exist(devices=devices)
@@ -123,62 +123,115 @@ class AudioManipulator:
                 raise InputDeviceNotFoundException("Error on selecting device.")
 
         except NoInputDeviceException:
-            self.logger.logger.exception("On device selecting, it seems there is no available audio device.")
+            self.logger.logger.exception("On device selecting, it seems there is no available audio_util device.")
             import sys
             sys.exit(1)  # exit as failure
 
         except InputDeviceNotFoundException:
             self.logger.logger.exception("On device selecting, {} does not matched.".format(device_candidate))
 
-    def voice_activity_detection(self, audio_data: np.ndarray = None, audio_buf=None):
+    def vad_generator(self, audio_data: np.ndarray, min_dur_sec: float = 0.2, max_dur_sec: float = 5,
+                      max_silence_sec: float = 0.5, energy_threshold: float = 50):
+        """
+        Vad based on energy.
+        Args:
+            energy_threshold:
+            max_dur_sec:
+            min_dur_sec:
+            max_silence_sec:
+            audio_data:
+        Returns:
+            res (auditok.core.AudioRegion): split audio signals (= region) for each duration.
+        Notes:
+            This VAD is based on `auditok` library, whose detection method calculates audio_util energy.
+            To avoid wrong detection, please run this method in silent place.
+        Todo:
+            Conduct an experiment to find what values of args are good for my research.
+        """
+        audio_region = auditok.AudioRegion(data=audio_data.tobytes(), sampling_rate=16000, sample_width=2, channels=1)
+        # res = audio_region.split(
+        res = auditok.split(
+            input=audio_region,
+            min_dur=min_dur_sec,
+            max_dur=max_dur_sec,
+            max_silence=max_silence_sec,
+            energy_threshold=energy_threshold
+        )
+        return res
+
+    def voice_activity_detection(self, audio_data: np.ndarray = None):
         """
         Do VAD with `shennong`, library for voice feature extraction.
         Notes:
             To default, the length of `audio_data` should be xx msec.
         Args:
             audio_buf:
-            audio_data (np.ndarray): the target audio data.
+            audio_data (np.ndarray): the target audio_util data.
         Returns:
         """
-        # calc mfcc, passing normalized audio data
+        # calc mfcc
         mfcc = self.calc_mfcc(audio_data=audio_data)
-        processor = VadPostProcessor()
-        vad = processor.process(features=mfcc)
-        # print!
-        # print(np.mean(mfcc.data))
-        nframes = mfcc.shape[0]
+        # calc cmvn
+        normalized_mfcc = self.calc_cmvn(mfcc=mfcc)
+        processor = VadPostProcessor(energy_mean_scale=0.5, energy_threshold=2.0)
+        vad = processor.process(features=normalized_mfcc)
+        nframes = normalized_mfcc.shape[0]
         nvoiced = sum(vad.data[vad.data == 1])
-        print('{} voiced frames out of {}'.format(nvoiced, nframes))
+        self.logger.logger.info('{} voiced frames out of {}'.format(nvoiced, nframes))
 
-    def calc_mfcc(self, audio_data: np.ndarray = None, window_type: str = "hanning"):
+    def calc_energy(self, voiced_audio_data: np.ndarray = None, sample_width: int = 0):
         """
-        Calc mfcc, audio feature, and return it.
+        Calc energy of each region using `auditok.signal.compute_average_channel`
+        Args:
+            sample_width:
+            voiced_audio_data (auditok.core.AudioRegion): The region to calculate energy.
+        Returns:
+            res (auditok.core.AudioRegion): calcurated audio signals (= region) for each duration.
+        """
+        res = auditok.signal.calculate_energy_single_channel(data=voiced_audio_data.tobytes(),
+                                                             sample_width=sample_width)
+        # print(res)
+        return res
+
+    def calc_mfcc(self, audio_data: bytes = None, window_type: str = "hanning"):
+        """
+        Calc mfcc, audio_util feature, and return it.
         Notes:
             For `audio_data`, whose range of value should be from -1 to 1 if dtype of np.ndarray is np.float32
             or np.float64.
             For more detail, please refer to https://docs.cognitive-ml.fr/shennong/python/audio.html
         Args:
-            audio_data (np.ndarray): the target audio data, which length is usually 25msec.
+            audio_data (np.ndarray): the target audio_util data, whose length is usually `25 * n`msec.
             window_type: which window you want to use {"hamming", "hanning", "povey", "rectangular", "blackman"}
         Returns:
-            res (shennong.features.Features):calculated mfcc data.
+            res (shennong.features.Features): calculated MFCC data.
         """
         processor = MfccProcessor(sample_rate=self.INPUT_SAMPLE_RATE, frame_length=0.025)
         processor.window_type = window_type
         processor.low_freq = 20
         processor.high_freq = 7800
-        processor.use_energy = False
-
         audio = shennong.Audio(data=audio_data, sample_rate=self.INPUT_SAMPLE_RATE)
-        print(np.mean(audio.data))
         res = processor.process(signal=audio)  # calc mfcc
+        return res
+
+    def calc_cmvn(self, mfcc: shennong.features.Features = None):
+        """
+        Calc CMVN, Cepstral Mean Variance Normalization, which makes MFCC zero mean and unit variance.
+        Args:
+            mfcc (shennong.features.Features): calculated MFCC
+        Returns:
+            res (shennong.features.Features): calculated CMVN
+        """
+        processor = CmvnPostProcessor(dim=mfcc.ndims)
+        processor.accumulate(mfcc)
+        res = processor.process(mfcc)
         return res
 
     def calc_normalization(self, audio_data: np.ndarray):
         """
-        Normalization for audio array.
+        Normalization for audio_util array.
         Notes:
-            DO NOT use with streaming data, because range is calculated for each block of audio.
+            DO NOT use with streaming data, because range is calculated for each block of audio_util.
         Returns:
             res (np.ndarray): Normalized data from -1 to 1
         """
@@ -187,18 +240,19 @@ class AudioManipulator:
         res = ((audio_data - data_min) / (data_max - data_min) - 0.5) * 2
         return res
 
-    def calc_fft(self):
-        # vertical axis
-        self.fft_data = np.abs(np.fft.fft(self.audio_data))
-        # horizontal axis
-        self.freq_list = np.fft.fftfreq(self.audio_data.shape[0], d=1.0 / self.rate)
-
     def calc_f0(self, data: np.ndarray):
         """
-        This method calculates f0 from numpy array of audio.
+        This method calculates f0 from numpy array of audio_util.
         """
         data = data.astype(np.float)
         data = np.squeeze(data)
         _f0, t = pw.dio(data, sd.default.samplerate)
         self._f0 = pw.stonemask(data, _f0, t, sd.default.samplerate)
         print(self.f0)
+
+    def save_wav_auditok(self, audio_region: auditok.AudioRegion, file_name: str = None):
+        # if file name is empty, set time format
+        if not file_name:
+            import datetime
+            file_name = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        audio_region.save(file_name)

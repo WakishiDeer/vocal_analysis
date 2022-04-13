@@ -1,20 +1,19 @@
-from logger import Logger
-from audio_manipulator import AudioManipulator
-import sounddevice as sd
+from util.logger import Logger
+
 
 class Audio:
     """
-    This is super class of any audio subclass. It contains audio data, sample rate, and more.
+    This is super class of any audio_util subclass. It contains audio_util data, sample rate, and more.
     Attributes:
-        self.sample_rate (int): default sample rate which will be defined during audio input selection
+        self.sample_rate (int): default sample rate which will be defined during audio_util input selection
         self.vad_frame (int): the duration of each vad processing frame (milli sec.)
     Todo:
-        Consider using MATLAB audio library which is callable from Python,
-        because there is little python library to handle realtime audio processing.
+        Consider using MATLAB audio_util library which is callable from Python,
+        because there is little python library to handle realtime audio_util processing.
     """
 
     def __init__(self, audio_manipulator):
-        # instance for audio calc and manipulate
+        # instance for audio_util calc and manipulate
         self.audio_manipulator = audio_manipulator
 
         # fields

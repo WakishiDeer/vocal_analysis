@@ -1,17 +1,18 @@
-import queue
-
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import numpy as np
-import sounddevice as sd
-from logger import Logger
+
+import queue
+
+from util.logger import Logger
+from util import sd
 
 
 class AudioHandler:
     """
-    This class contains realtime audio controller such as matplotlib.
+    This class contains realtime audio_util controller such as matplotlib.
     Args:
-        self._audio_stream (object): The instance of audio stream from AudioStream Class,
+        self._audio_stream (object): The instance of audio_util stream from AudioStream Class,
         which will be used to plot or calculate streaming data.
     """
 
@@ -67,8 +68,6 @@ class AudioHandler:
             self.logger.logger.info("Steaming...")
             self.logger.logger.info("Starting voice activity detection.")
             input("If you want to exit, please put any.")  # wait for keyboard
-            import time
-            time.sleep(100)
 
     def start_plot_amplitude(self):
         # plot setting

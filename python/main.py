@@ -1,24 +1,22 @@
+from util.profile import Profile
+from util.logger import Logger
+from audio_manipulator import AudioManipulator
 from audio_stream import AudioStream
 from audio_handler import AudioHandler
-from audio_manipulator import AudioManipulator
-from profile import Profile
-from logger import Logger
 
 
 class Main:
     """
-    This is main class for controlling commandline arguments, audio input, calc, plot, and others.
+    This is main class for controlling commandline arguments, audio_util input, calc, plot, and others.
     Attributes:
     """
 
     def __init__(self):
-        # pprint.pprint(results_list)
+
         # initialization for help of commandline arguments
         _args = self._argparse_init()
-        import pprint
-        pprint.pprint(_args)
-        self.profile = Profile.set_args(args=_args)  # you can access args via `self.profile`)
-        # instances for each audio class
+        Profile.set_args(args=_args)  # you can access args via `self.profile`
+        # instances for each audio_util class
         self._audio_stream = None
         self._audio_handler = None
         self._audio_manipulator = AudioManipulator()
@@ -30,15 +28,16 @@ class Main:
         import argparse
         # general description
         parser = argparse.ArgumentParser(
-            description="The program for audio analysis, which includes file based and audio stream (realtime) one.")
-        # description to display available audio input
-        parser.add_argument("-a", "--available_device", help="display all of available audio device with index",
+            description="The program for audio_util analysis, which includes file based and "
+                        "audio_util stream (realtime) one.")
+        # description to display available audio_util input
+        parser.add_argument("-a", "--available_device", help="display all of available audio_util device with index",
                             action="store_true", default=False)
         # description for each argument
         # following `-f` and `-s` arguments should be mutually exclusive (i.e., xor)
         xor_group = parser.add_mutually_exclusive_group(required=True)
         xor_group.add_argument("-f", "--filename", help="whether using wave file or not")
-        xor_group.add_argument("-s", "--stream", help="whether using audio device as input source or not",
+        xor_group.add_argument("-s", "--stream", help="whether using audio_util device as input source or not",
                                action="store_true", default=False)
         xor_group.add_argument("-i", "--input", help="start as input mode. it won't be plotted.", action="store_true",
                                default=False)
