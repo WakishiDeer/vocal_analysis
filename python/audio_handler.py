@@ -57,10 +57,10 @@ class AudioHandler:
         This method just input and does not plot anything.
         Returns:
         """
-        if is_buffer:
+        if is_buffer:  # i.e., input is type of `byte`
             self.audio_stream.stream = self.audio_stream.get_input_stream_raw()
             self.logger.logger.info("Streaming with buffer mode.")
-        else:
+        else:   # i.e., input is type of `np.ndarray`
             self.audio_stream.stream = self.audio_stream.get_input_stream_numpy()
             self.logger.logger.info("Streaming with numpy mode.")
         # start streaming

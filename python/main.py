@@ -1,6 +1,7 @@
 from util.profile import Profile
 from util.logger import Logger
 from audio_manipulator import AudioManipulator
+from audio_calculator import AudioCalculator
 from audio_stream import AudioStream
 from audio_handler import AudioHandler
 
@@ -20,6 +21,7 @@ class Main:
         self._audio_stream = None
         self._audio_handler = None
         self._audio_manipulator = AudioManipulator()
+        self._audio_calculator = AudioCalculator()
 
         # Logger setting
         self.logger = Logger(name=__name__)
@@ -60,7 +62,8 @@ class Main:
             self.audio_handler.start_plot_amplitude()
         elif Profile.args.input:
             self.logger.logger.info("Start streaming input (without plotting).")
-            self.audio_stream = AudioStream(audio_manipulator=self.audio_manipulator)
+            self.audio_stream = AudioStream(audio_manipulator=self.audio_manipulator,
+                                            audio_calculator=self.audio_calculator)
             self.audio_handler = AudioHandler(audio_stream=self.audio_stream)
             self.audio_handler.start_input()
         else:
@@ -69,6 +72,10 @@ class Main:
     @property
     def audio_manipulator(self):
         return self._audio_manipulator
+
+    @property
+    def audio_calculator(self):
+        return self._audio_calculator
 
     @property
     def audio_stream(self):
@@ -81,6 +88,10 @@ class Main:
     @audio_manipulator.setter
     def audio_manipulator(self, data):
         self._audio_manipulator = data
+
+    @audio_calculator.setter
+    def audio_calculator(self, data):
+        self._audio_calculator = data
 
     @audio_stream.setter
     def audio_stream(self, data):
