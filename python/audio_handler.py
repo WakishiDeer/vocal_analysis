@@ -60,13 +60,16 @@ class AudioHandler:
         if is_buffer:  # i.e., input is type of `byte`
             self.audio_stream.stream = self.audio_stream.get_input_stream_raw()
             self.logger.logger.info("Streaming with buffer mode.")
-        else:   # i.e., input is type of `np.ndarray`
+        else:  # i.e., input is type of `np.ndarray`
             self.audio_stream.stream = self.audio_stream.get_input_stream_numpy()
             self.logger.logger.info("Streaming with numpy mode.")
         # start streaming
         with self.audio_stream.stream:
             self.logger.logger.info("Steaming...")
             self.logger.logger.info("Starting voice activity detection.")
+            # callback start
+            self.audio_stream.zeromq_sender.handle_message()
+
             input("If you want to exit, please put any.")  # wait for keyboard
 
     def start_plot_amplitude(self):

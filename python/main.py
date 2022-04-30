@@ -1,5 +1,6 @@
 from util.profile import Profile
 from util.logger import Logger
+from util.zeromq_sender import ZeroMQSender
 from audio_manipulator import AudioManipulator
 from audio_calculator import AudioCalculator
 from audio_stream import AudioStream
@@ -13,18 +14,19 @@ class Main:
     """
 
     def __init__(self):
+        # Logger setting
+        self.logger = Logger(name=__name__)
 
         # initialization for help of commandline arguments
         _args = self._argparse_init()
-        Profile.set_args(args=_args)  # you can access args via `self.profile`
+        Profile.set_args(args=_args)
         # instances for each audio_util class
         self._audio_stream = None
         self._audio_handler = None
+        self._zeromq_sender = None
         self._audio_manipulator = AudioManipulator()
         self._audio_calculator = AudioCalculator()
-
-        # Logger setting
-        self.logger = Logger(name=__name__)
+        self._zeromq_sender = ZeroMQSender()
 
     def _argparse_init(self):
         import argparse
@@ -60,12 +62,16 @@ class Main:
         elif Profile.args.stream:
             self.logger.logger.info("Start streaming and plotting.")
             self.audio_handler.start_plot_amplitude()
+            # todo complete following process
         elif Profile.args.input:
             self.logger.logger.info("Start streaming input (without plotting).")
             self.audio_stream = AudioStream(audio_manipulator=self.audio_manipulator,
-                                            audio_calculator=self.audio_calculator)
+                                            audio_calculator=self.audio_calculator,
+                                            zeromq_sender=self.zeromq_sender
+                                            )
             self.audio_handler = AudioHandler(audio_stream=self.audio_stream)
-            self.audio_handler.start_input()
+            self.audio_handler.start_input()  # input audio
+            self.zeromq_sender.handle_message()  # send message
         else:
             self.logger.logger.error("Invalid mode selection.")
 
@@ -85,6 +91,10 @@ class Main:
     def audio_handler(self):
         return self._audio_handler
 
+    @property
+    def zeromq_sender(self):
+        return self._zeromq_sender
+
     @audio_manipulator.setter
     def audio_manipulator(self, data):
         self._audio_manipulator = data
@@ -100,6 +110,10 @@ class Main:
     @audio_handler.setter
     def audio_handler(self, data):
         self._audio_handler = data
+
+    @zeromq_sender.setter
+    def zeromq_sender(self, data):
+        self._zeromq_sender = data
 
 
 if __name__ == '__main__':

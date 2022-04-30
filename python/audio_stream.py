@@ -15,11 +15,14 @@ class AudioStream(Audio):
     And an instance of this class will be used in `AudioController` class in `audio_handler.py`
     """
 
-    def __init__(self, audio_manipulator=None, audio_calculator=None):
+    def __init__(self, audio_manipulator=None, audio_calculator=None, zeromq_sender=None):
         """
         Initialize sound device to decide which one to select for audio_util stream.
         """
         super().__init__(audio_manipulator=audio_manipulator, audio_calculator=audio_calculator)
+        self.zeromq_sender = zeromq_sender
+        # initialize connection with Unity
+        self.zeromq_sender.initialize_connection()
 
         try:
             if not Profile.is_input_device_set:
@@ -46,6 +49,7 @@ class AudioStream(Audio):
     def audio_callback_numpy(self, indata: np.ndarray, frames: int, time, status):
         """
         This callback will be called from each audio_util block.
+        After calculation, the dict of values will send to Unity Process.
         Args:
             indata (np.ndarray): This is audio_util data whose shape will be (`self.block_size`, `sd.default.channels[0]`).
             frames:
@@ -57,6 +61,15 @@ class AudioStream(Audio):
         self.audio_data = np.append(self.audio_data, indata)
         # calculate
         self.handle_calculation(indata=indata)
+
+        try:
+            # send data after checking initialization
+            if self.zeromq_sender.is_initialized:
+                self.zeromq_sender.set_message(average_energy_rms=self.average_energy_rms)
+            else:
+                raise ZeroMQNotInitialized("Error before sending message")
+        except ZeroMQNotInitialized:
+            self.logger.logger.warn("ZeroMQ is not initialized, so message won't send.")
 
     def audio_callback_raw(self, indata, frames: int, time, status):
         pass
@@ -97,10 +110,11 @@ class AudioStream(Audio):
                 # store voiced regions and energy
                 self.region_concat = region + self.region_concat
                 self.region_concat_energy = np.append(self.region_concat_energy, root_energy)
-        if region_info is not "":
+        if region_info != "":
             self.logger.logger.info(region_info)
+            self.average_energy_rms = self.audio_calculator.calc_average_energy_rms(root_energy=root_energy)
             print("avg rms of energy: ",
-                  self.audio_calculator.calc_average_energy_rms(root_energy=root_energy),
+                  self.average_energy_rms,
                   "\n")
 
     def store_values(self):

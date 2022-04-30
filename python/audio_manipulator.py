@@ -126,7 +126,7 @@ class AudioManipulator:
 
     def int_to_float32(self, audio_data: np.ndarray = None):
         try:
-            if audio_data.dtype is "float32":
+            if audio_data.dtype =="float32":
                 raise IncorrectTypeException("Error when converting into float32")
         except IncorrectTypeException:
             self.logger.logger.exception("{} can't accept float32.".format(__name__))
@@ -137,7 +137,7 @@ class AudioManipulator:
 
     def float_to_int16(self, audio_data: np.ndarray = None):
         try:
-            if audio_data.dtype is "int16":
+            if audio_data.dtype == "int16":
                 raise IncorrectTypeException("Error when converting into int16")
         except IncorrectTypeException:
             self.logger.logger.exception("{} can't accept int16.".format(__name__))
@@ -154,5 +154,9 @@ class AudioManipulator:
         import os
         # get current executing path
         absolute_path = os.path.abspath("..")
-        path = os.path.join(absolute_path, "etc", file_name + ".wav")
-        audio_region.save(path)
+        destination_path = os.path.join(absolute_path, "etc")
+        file_path = os.path.join(destination_path, file_name + ".wav")
+        # if there is no path, make directories
+        if not os.path.exists(destination_path):
+            os.makedirs(destination_path)
+        audio_region.save(file_path)

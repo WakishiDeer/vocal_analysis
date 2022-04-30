@@ -4,7 +4,6 @@ import numpy as np
 
 class Audio:
     """
-    This is super class of any audio_util subclass. It contains audio_util data, sample rate, and more.
     Attributes:
         self.audio_manipulator: Instance of AudioManipulator which includes methods to control audio devices and audio.
         self.audio_calculator: Instance of AudioCalculator which includes methods for calculation such as rms energy.
@@ -19,9 +18,10 @@ class Audio:
         self.audio_calculator = audio_calculator
 
         # fields
-        self._audio_data = np.array([])  # overall audio data
+        self._audio_data: np.ndarray = np.array([])  # overall audio data
         self.current_audio_data = None
         self._f0 = None
+        self._average_energy_rms: np.float64 = np.float64()
 
         # Logger setting
         self.logger = Logger(name=__name__)
@@ -34,6 +34,10 @@ class Audio:
     def f0(self):
         return self._f0
 
+    @property
+    def average_energy_rms(self):
+        return self._average_energy_rms
+
     @audio_data.setter
     def audio_data(self, data):
         self._audio_data = data
@@ -41,3 +45,7 @@ class Audio:
     @f0.setter
     def f0(self, data):
         self._f0 = data
+
+    @average_energy_rms.setter
+    def average_energy_rms(self, data):
+        self._average_energy_rms = data
