@@ -21,3 +21,8 @@ class DefaultInputDeviceException(Exception):
 class IncorrectTypeException(Exception):
     def __init__(self, message):
         super(IncorrectTypeException, self).__init__(message)
+
+
+class ZeroMQNotInitialized(Exception):
+    def __init__(self, message):
+        super(ZeroMQNotInitialized, self).__init__(message)
