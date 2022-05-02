@@ -3,6 +3,7 @@ from matplotlib.animation import FuncAnimation
 import numpy as np
 
 import queue
+from typing import List
 
 from util.logger import Logger
 from util import sd
@@ -19,10 +20,10 @@ class AudioHandler:
     def __init__(self, audio_stream):
         self._audio_stream = audio_stream
         # plot setting
-        self.window = 2000.0
-        self.interval = 30.0
-        self.samplerate = sd.default.samplerate
-        self.channels = [1]  # input channels to plot
+        self.window: float = 2000.0
+        self.interval: float = 30.0
+        self.samplerate: int = sd.default.samplerate
+        self.channels: List[int] = [1]  # input channels to plot
         self.lines = None
         self.plot_data = None
 
