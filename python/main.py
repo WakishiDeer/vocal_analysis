@@ -21,12 +21,11 @@ class Main:
         _args = self._argparse_init()
         Profile.set_args(args=_args)
         # instances for each audio_util class
-        self._audio_stream = None
-        self._audio_handler = None
-        self._zeromq_sender = None
-        self._audio_manipulator = AudioManipulator()
-        self._audio_calculator = AudioCalculator()
-        self._zeromq_sender = ZeroMQSender()
+        self._audio_stream: AudioStream = None
+        self._audio_handler: AudioHandler = None
+        self._audio_manipulator: AudioManipulator = AudioManipulator()
+        self._audio_calculator: AudioCalculator = AudioCalculator()
+        self._zeromq_sender: ZeroMQSender = ZeroMQSender()
 
     def _argparse_init(self):
         import argparse

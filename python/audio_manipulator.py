@@ -19,7 +19,7 @@ class AudioManipulator:
         # for audio_util device setting
         import re
         self.pattern = re.compile("\\S+")
-        self.INPUT_SAMPLE_RATE = None
+        self.INPUT_SAMPLE_RATE = None  # input samplerate of the device (can be down sampled)
 
     def get_devices(self):
         # session for listing audio_util device
@@ -126,7 +126,7 @@ class AudioManipulator:
 
     def int_to_float32(self, audio_data: np.ndarray = None):
         try:
-            if audio_data.dtype =="float32":
+            if audio_data.dtype == "float32":
                 raise IncorrectTypeException("Error when converting into float32")
         except IncorrectTypeException:
             self.logger.logger.exception("{} can't accept float32.".format(__name__))

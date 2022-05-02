@@ -6,7 +6,6 @@ import zmq
 from zmq.asyncio import Context
 from tornado.ioloop import IOLoop
 
-from profile import Profile
 from .logger import Logger
 
 

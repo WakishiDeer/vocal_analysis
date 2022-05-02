@@ -32,17 +32,22 @@ class AudioStream(Audio):
             self.logger.exception("Setting for input device hasn't done yet.")
         else:
             # setting for input device
+
             self.DOWN_SAMPLE: int = 20
             self.CHUNK_DURATION_MS: int = 25 * 40 * 5
             self.FRAME_LENGTH: int = int(  # number of overall frames per callback
                 self.audio_manipulator.INPUT_SAMPLE_RATE * self.CHUNK_DURATION_MS / 1000)
             self.WINDOW_LENGTH: int = 512  # length for each sliding process
             self.HOP_LENGTH: int = self.WINDOW_LENGTH // 4  # usually, one-fourth of WINDOW_LENGTH
+            self.SAMPLE_WIDTH = 2
             self.buffer: queue.Queue = queue.Queue()  # this is for plot
 
             # audio data
             self.region_concat: auditok.AudioRegion = auditok.AudioRegion(
-                data=np.array([]).tobytes())  # `auditok.AudioRegion` can use operator `+` to concatenate
+                data=np.array([]).tobytes(),
+                sampling_rate=self.audio_manipulator.INPUT_SAMPLE_RATE,
+                sample_width=self.SAMPLE_WIDTH,
+                channels=1)  # `auditok.AudioRegion` can use operator `+` to concatenate
             self.region_concat_energy: np.ndarray = np.array([])
             self.region_concat_f0: np.ndarray = np.array([])
             self.region_concat_f0_flags: np.ndarray = np.array([])
@@ -112,16 +117,10 @@ class AudioStream(Audio):
                                                                 is_freq=is_freq)
             # calculate f0
             f0, voiced_flag, _, times = self.audio_calculator.calc_f0(voiced_audio_data=voiced_audio_data)
-
+            # store and concat values
+            self.store_values(region=region, root_energy=root_energy, f0=f0, voiced_flag=voiced_flag)
             # concat region info
-            region_info += "#{} region: {}sec detected.\n".format(i, region.duration)
-            # concat voiced regions
-            self.region_concat = region + self.region_concat
-            # concat energy
-            self.region_concat_energy = np.append(self.region_concat_energy, root_energy)
-            # concat f0 and its flag (voiced or not)
-            self.region_concat_f0 = np.append(self.region_concat_f0, f0)
-            self.region_concat_f0_flags = np.append(self.region_concat_f0_flags, voiced_flag)
+            region_info += "\n#{} region: {}sec detected.\n".format(i, region.duration)
 
         # if the voiced region was not found
         if region_info != "":
@@ -129,12 +128,18 @@ class AudioStream(Audio):
             self.average_energy_rms = self.audio_calculator.calc_average_energy_rms(root_energy=root_energy)
             # print("avg rms of energy: ", self.average_energy_rms, "\n")
 
-    def store_values(self):
+    def store_values(self, region, root_energy, f0, voiced_flag):
         """
         Store values which is calculated and raw ones.
         Returns:
         """
-        pass
+        # concat voiced regions
+        self.region_concat = region + self.region_concat
+        # concat energy
+        self.region_concat_energy = np.append(self.region_concat_energy, root_energy)
+        # concat f0 and its flag (voiced or not)
+        self.region_concat_f0 = np.append(self.region_concat_f0, f0)
+        self.region_concat_f0_flags = np.append(self.region_concat_f0_flags, voiced_flag)
 
     def get_input_stream_numpy(self) -> sd.InputStream:
         """
