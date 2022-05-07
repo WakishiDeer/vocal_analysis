@@ -53,6 +53,25 @@ class ZeroMQSender:
                 await self.socket.send_multipart([json.dumps(self.message_dict).encode("ascii")])
                 self.is_sendable = False
 
+    def snake_to_camel(self, data_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Reformat string variable name according to the custom of the connection
+        Examples:
+            input: {"abc": foo, "a_bc": bar}
+            output: {"Abc": foo, "aBc": bar}
+        """
+        import re
+        # convert all keyword of the dictionary
+        for snake_key in data_dict:
+            # temporary store the value
+            value = data_dict[snake_key]
+            # remove snake_key and its value
+            del data_dict[snake_key]
+            camel_key = re.sub("_(.)", lambda msg: msg.group(1).upper(), snake_key)
+            # re-store the data
+            data_dict[camel_key] = value
+        return data_dict
+
     def set_message(self, **kwargs: Dict[str, Any]):
         """
         Sets format of sending message.
