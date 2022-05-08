@@ -26,3 +26,8 @@ class IncorrectTypeException(Exception):
 class ZeroMQNotInitialized(Exception):
     def __init__(self, message):
         super(ZeroMQNotInitialized, self).__init__(message)
+
+
+class GotNanException(Exception):
+    def __init__(self, message):
+        super(GotNanException, self).__init__(message)
