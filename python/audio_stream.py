@@ -151,7 +151,13 @@ class AudioStream(Audio):
             self.logger.logger.info(region_info)
             # calc features with overall data
             self.average_energy_rms = self.audio_calculator.calc_average_energy_rms(root_energy=root_energy)
-            self.average_f0 = self.audio_calculator.calc_average_f0(f0=f0)
+            # when getting NaN, `np.float64(0.0)` will be returned
+            f0_avg_candidate = self.audio_calculator.calc_average_f0(f0=f0)
+            # check if f0 average is valid (NaN) or not
+            if f0_avg_candidate != np.float64(0.0):
+                self.average_f0 = f0_avg_candidate
+            else:  # otherwise, retain previous value
+                pass
 
     def concat_values(self, region, root_energy, f0):
         """

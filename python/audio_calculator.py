@@ -183,6 +183,7 @@ class AudioCalculator:
                 raise GotNanException("Error when calculating average of f0")
         except GotNanException:
             self.logger.logger.warn("Got value of `nan` when calculating average of f0.")
+            return np.float64(0.0)
         return f0_avg
 
     def calc_normalization(self, audio_data: np.ndarray) -> np.ndarray:
