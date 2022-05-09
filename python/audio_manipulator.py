@@ -1,3 +1,5 @@
+import re
+from typing import Union
 import numpy as np
 import auditok
 
@@ -124,15 +126,17 @@ class AudioManipulator:
         except InputDeviceNotFoundException:
             self.logger.logger.exception("On device selecting, {} does not matched.".format(device_candidate))
 
-    def int_to_float32(self, audio_data: np.ndarray = None):
+    def int_to_float64(self, audio_data: np.ndarray = None):
+        pattern = r"(float)\d{2,3}"
+        res: Union[re.Match, None] = re.match(pattern, str(audio_data.dtype))
         try:
-            if audio_data.dtype == "float32":
-                raise IncorrectTypeException("Error when converting into float32")
+            if res is not None:  # when float type is found
+                raise IncorrectTypeException("Error when converting into float")
         except IncorrectTypeException:
-            self.logger.logger.exception("{} can't accept float32.".format(__name__))
+            self.logger.logger.exception("{} can't accept float.".format(__name__))
             import sys
             sys.exit(1)  # exit as failure
-        res = (audio_data / 2 ** 15).astype(np.float32)
+        res = (audio_data / 2 ** 15).astype(np.float64)
         return res
 
     def float_to_int16(self, audio_data: np.ndarray = None):

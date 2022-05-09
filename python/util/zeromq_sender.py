@@ -1,19 +1,18 @@
 import json
-from typing import Any
-from typing import Dict
+from typing import Dict, Any
 
 import zmq
 from zmq.asyncio import Context
 from tornado.ioloop import IOLoop
 
 from .logger import Logger
+from .time_measure import TimeMeasure
 
 
 class ZeroMQSender:
     """
     This class defines the way to response data to C# Program running on Unity.
     In short, this class works as sever.
-    Todo: implement message process with AsyncIO
     Note:
         ref: https://github.com/zeromq/pyzmq/blob/main/examples/asyncio/coroutines.py
     """
@@ -60,19 +59,20 @@ class ZeroMQSender:
             input: {"abc": foo, "a_bc": bar}
             output: {"Abc": foo, "aBc": bar}
         """
+        # new dict
+        res_dict = {}
         import re
         # convert all keyword of the dictionary
         for snake_key in data_dict:
             # temporary store the value
             value = data_dict[snake_key]
             # remove snake_key and its value
-            del data_dict[snake_key]
             camel_key = re.sub("_(.)", lambda msg: msg.group(1).upper(), snake_key)
             # re-store the data
-            data_dict[camel_key] = value
-        return data_dict
+            res_dict[camel_key] = value
+        return res_dict
 
-    def set_message(self, **kwargs: Dict[str, Any]):
+    def set_message(self, data_dict: Dict[str, Any]):
         """
         Sets format of sending message.
         Format should follow the one of OpenFace.
@@ -81,14 +81,13 @@ class ZeroMQSender:
         -0.11,0.22,0.37,-1.49,-0.24,-1.16,-0.17,0.72,0.30,0.65,1.15,1.16,-0.11]}`
         So, `audio_data_dict` should be like: Dict[str, Any]
         """
-        # annotation for dictionary
-        audio_data_dict: Dict[str, Any] = kwargs
+        # initialize dict for message
         self.message_dict = {}
-        for key in audio_data_dict:
+        for key in data_dict:
             # add every keyword and value
-            self.message_dict[key] = audio_data_dict[key]
-        # ready to send message
-        self.is_sendable = True
+            self.message_dict[key] = data_dict[key]
+        # time annotation
+        self.message_dict["t"]: float = TimeMeasure.get_process_time()
 
     def handle_message(self) -> None:
         """
