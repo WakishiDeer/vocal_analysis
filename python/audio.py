@@ -17,8 +17,10 @@ class Audio:
         self._audio_data: np.ndarray = np.array([])  # overall audio data
         self.current_audio_data = None
         self._f0 = None
-        self._average_energy_rms: np.float32 = np.float32()
-        self._average_f0: np.float32 = np.float32()
+        self._average_energy_rms: np.float64 = np.float64()
+        self._average_f0: np.float64 = np.float64()
+        self._average_spl_db: np.float64 = np.float64()
+        self._std_spl_db: np.float64 = np.float64()
 
     @property
     def audio_data(self):
