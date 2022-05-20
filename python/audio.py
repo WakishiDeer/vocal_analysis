@@ -17,10 +17,10 @@ class Audio:
         self._audio_data: np.ndarray = np.array([])  # overall audio data
         self.current_audio_data = None
         self._f0 = None
-        self._average_energy_rms: np.float64 = np.float64()
+        self._average_rms: np.float64 = np.float64()
         self._average_f0: np.float64 = np.float64()
-        self._average_spl_db: np.float64 = np.float64()
-        self._std_spl_db: np.float64 = np.float64()
+        self._average_rms_db: np.float64 = np.float64()
+        self._std_rms_db: np.float64 = np.float64()
 
     @property
     def audio_data(self):
@@ -31,8 +31,16 @@ class Audio:
         return self._f0
 
     @property
-    def average_energy_rms(self):
-        return self._average_energy_rms
+    def average_rms(self):
+        return self._average_rms
+
+    @property
+    def average_rms_db(self):
+        return self._average_rms_db
+
+    @property
+    def std_rms_db(self):
+        return self._std_rms_db
 
     @property
     def average_f0(self):
@@ -46,9 +54,17 @@ class Audio:
     def f0(self, data):
         self._f0 = data
 
-    @average_energy_rms.setter
-    def average_energy_rms(self, data):
-        self._average_energy_rms = data
+    @average_rms.setter
+    def average_rms(self, data):
+        self._average_rms = data
+
+    @average_rms_db.setter
+    def average_rms_db(self, data):
+        self._average_rms_db = data
+
+    @std_rms_db.setter
+    def std_rms_db(self, data):
+        self.std_rms_db = data
 
     @average_f0.setter
     def average_f0(self, data):

@@ -34,7 +34,7 @@ class AudioStream(Audio):
             if not Profile.is_input_device_set:
                 raise DefaultInputDeviceException
         except DefaultInputDeviceException:
-            self.logger.exception("Setting for input device hasn't done yet.")
+            self.logger.logger.exception("Setting for input device hasn't done yet.")
         else:
             # setting for input device
             self.DOWN_SAMPLE: int = 20
@@ -52,7 +52,8 @@ class AudioStream(Audio):
                 sampling_rate=self.audio_manipulator.INPUT_SAMPLE_RATE,
                 sample_width=self.SAMPLE_WIDTH,
                 channels=1)  # `auditok.AudioRegion` can use operator `+` to concatenate
-            self.region_concat_energy: np.ndarray = np.array([])
+            self.region_concat_rms: np.ndarray = np.array([])
+            self.region_concat_rms_db: np.ndarray = np.array([])
             self.region_concat_f0: np.ndarray = np.array([])
             # dictionary for sending audio features
             self.message_dict: Dict[str, Any] = {}
@@ -78,7 +79,8 @@ class AudioStream(Audio):
         # calculate
         self.handle_calculation(indata=indata)
         # store dict for message
-        self.store_message_values(average_energy_rms=self.average_energy_rms, average_f0=self.average_f0)
+        self.store_message_values(average_rms=self.average_rms, average_rms_db=self.average_rms_db,
+                                  std_rms_db=self.std_rms_db, average_f0=self.average_f0)
 
         try:
             # send message after checking initialization
@@ -107,7 +109,8 @@ class AudioStream(Audio):
         vad_generator = self.audio_calculator.vad_generator(audio_data=indata,
                                                             max_dur_sec=self.CHUNK_DURATION_MS / 1000)
 
-        root_energy: np.ndarray = np.array([])
+        rms: np.ndarray = np.array([])
+        rms_db: np.ndarray = np.array([])
         f0 = np.array([])
         region_info: str = str()
 
@@ -127,10 +130,13 @@ class AudioStream(Audio):
                 n_fft=self.WINDOW_LENGTH)
             # separate complex-valued data into magnitude and phase
             magnitude, _ = self.audio_calculator.calc_magphase(voiced_audio_data_freq=voiced_audio_data_freq)
+
             # calculate energy
-            root_energy = self.audio_calculator.calc_energy_rms(magnitude=magnitude,
-                                                                frame_length=512,
-                                                                is_freq=is_freq)
+            rms = self.audio_calculator.calc_energy_rms(magnitude=magnitude,
+                                                        frame_length=512,
+                                                        is_freq=is_freq)
+            # calculate sound pressure level (SPL) with db
+            rms_db = self.audio_calculator.calc_amplitude_to_db(audio_amplitude=np.abs(rms))
             # calculate f0
             for f0_method in Profile.f0_estimation_methods:
                 if f0_method == "pYIN":
@@ -141,16 +147,21 @@ class AudioStream(Audio):
                     f0 = self.audio_calculator.calc_f0_harvest(voiced_audio_data=voiced_audio_data,
                                                                sample_rate=self.audio_manipulator.INPUT_SAMPLE_RATE)
             # store and concat values
-            self.concat_values(region=region, root_energy=root_energy, f0=f0)
+            self.concat_values(region=region, rms=rms, rms_db=rms_db, f0=f0)
 
             # concat region info
             region_info += "\n#{} region: {}sec detected.".format(i, region.duration)
 
-        # if the voiced region was not found
-        if region_info != "":
+        # calc features with overall data
+        if region_info != "":  # if the voiced region was not found
             self.logger.logger.info(region_info)
-            # calc features with overall data
-            self.average_energy_rms = self.audio_calculator.calc_average_energy_rms(root_energy=root_energy)
+            # calc average of rms
+            self.average_rms = self.audio_calculator.calc_mean(audio_data=rms)
+            # calc average of rms_db
+            self.average_rms_db = self.audio_calculator.calc_mean(audio_data=rms_db)
+            # calc std of rms_db
+            self.std_rms_db = self.audio_calculator.calc_standard_deviation(audio_data=rms_db)
+
             # when getting NaN, `np.float64(0.0)` will be returned
             f0_avg_candidate = self.audio_calculator.calc_average_f0(f0=f0)
             # check if f0 average is valid (NaN) or not
@@ -159,7 +170,7 @@ class AudioStream(Audio):
             else:  # otherwise, retain previous value
                 pass
 
-    def concat_values(self, region, root_energy, f0):
+    def concat_values(self, region, rms, f0, rms_db):
         """
         Store values which is calculated and raw ones into fields.
         Returns:
@@ -167,7 +178,9 @@ class AudioStream(Audio):
         # concat voiced regions
         self.region_concat = region + self.region_concat
         # concat energy
-        self.region_concat_energy = np.append(self.region_concat_energy, root_energy)
+        self.region_concat_rms = np.append(self.region_concat_rms, rms)
+        # concat spl
+        self.region_concat_rms_db = np.appen(self.region_concat_rms_db, rms_db)
         # concat f0
         self.region_concat_f0 = np.append(self.region_concat_f0, f0)
 

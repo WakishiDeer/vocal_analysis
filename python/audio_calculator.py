@@ -1,6 +1,8 @@
 from util.logger import Logger
 from util.exception import GotNanException
 
+from typing import Union
+
 import numpy as np
 import auditok
 import librosa
@@ -100,14 +102,33 @@ class AudioCalculator:
             res = librosa.feature.rms(y=voiced_audio_data, frame_length=frame_length, hop_length=hop_length)
         return res
 
-    def calc_average_energy_rms(self, root_energy: np.ndarray = None) -> np.float64:
+    def calc_mean(self, audio_data: np.ndarray = None) -> np.float64:
         """
-        Calc average for root-mean-square of energy.
+        Calc mean, given as np.ndarray
         Args:
-            root_energy:
+            audio_data:
         Returns:
         """
-        res = np.mean(root_energy, dtype=np.float64)
+        res = np.mean(audio_data, dtype=np.float64)
+        return res
+
+    def calc_standard_deviation(self, audio_data: np.ndarray) -> Union[np.float64 | np.ndarray]:
+        """
+        Calc standard deviation, given as np.ndarray.
+        Notes:
+            This function should be called for each voiced region.
+            i.e., SD for each sentence
+        """
+        res = np.std(a=audio_data, dtype=np.float64)
+        return res
+
+    def calc_amplitude_to_db(self, audio_amplitude: np.ndarray) -> np.ndarray:
+        """
+        Convert amplitude representation into decibel
+        Notes:
+            This is NOT for spectrogram.
+        """
+        res = 20 * np.log10(audio_amplitude)
         return res
 
     def calc_f0_pyin(self, voiced_audio_data: np.ndarray = None, sample_rate: int = 16000,
@@ -185,16 +206,3 @@ class AudioCalculator:
             self.logger.logger.warn("Got value of `nan` when calculating average of f0.")
             return np.float64(0.0)
         return f0_avg
-
-    def calc_normalization(self, audio_data: np.ndarray) -> np.ndarray:
-        """
-        Normalization for audio_util array.
-        Notes:
-            DO NOT use with streaming data, because range is calculated for each block of audio_util.
-        Returns:
-            res (np.ndarray): Normalized data from -1 to 1
-        """
-        data_min = audio_data.min(keepdims=True)
-        data_max = audio_data.max(keepdims=True)
-        res = ((audio_data - data_min) / (data_max - data_min) - 0.5) * 2
-        return res
