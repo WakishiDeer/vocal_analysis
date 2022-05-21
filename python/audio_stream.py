@@ -180,7 +180,7 @@ class AudioStream(Audio):
         # concat energy
         self.region_concat_rms = np.append(self.region_concat_rms, rms)
         # concat spl
-        self.region_concat_rms_db = np.appen(self.region_concat_rms_db, rms_db)
+        self.region_concat_rms_db = np.append(self.region_concat_rms_db, rms_db)
         # concat f0
         self.region_concat_f0 = np.append(self.region_concat_f0, f0)
 

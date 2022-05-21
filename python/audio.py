@@ -64,7 +64,7 @@ class Audio:
 
     @std_rms_db.setter
     def std_rms_db(self, data):
-        self.std_rms_db = data
+        self._std_rms_db = data
 
     @average_f0.setter
     def average_f0(self, data):
