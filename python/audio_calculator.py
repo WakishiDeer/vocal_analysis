@@ -55,6 +55,9 @@ class AudioCalculator:
         )
         return res
 
+    # def calc_samples_to_time(self, audio_data: np.ndarray, sample_rate: int = 16000) -> float:
+    #     return audio_data.size / float(sample_rate)
+
     def calc_short_time_fourier_transform(self, voiced_audio_data: np.ndarray = None, n_fft=512,
                                           hop_length: int = 512 // 4):
         """

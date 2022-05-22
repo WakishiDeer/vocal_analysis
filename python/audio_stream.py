@@ -47,16 +47,15 @@ class AudioStream(Audio):
             self.buffer: queue.Queue = queue.Queue()  # this is for plot
 
             # audio data
-            self.region_concat: auditok.AudioRegion = auditok.AudioRegion(
+            self.concat_region: auditok.AudioRegion = auditok.AudioRegion(
                 data=np.array([]).tobytes(),
                 sampling_rate=self.audio_manipulator.INPUT_SAMPLE_RATE,
                 sample_width=self.SAMPLE_WIDTH,
                 channels=1)  # `auditok.AudioRegion` can use operator `+` to concatenate
-            self.region_concat_rms: np.ndarray = np.array([])
-            self.region_concat_rms_db: np.ndarray = np.array([])
-            self.region_concat_f0: np.ndarray = np.array([])
+            self.concat_rms: np.ndarray = np.array([])
+            self.concat_rms_db: np.ndarray = np.array([])
+            self.concat_f0: np.ndarray = np.array([])
             # dictionary for sending audio features
-            self.message_dict: Dict[str, Any] = {}
             self.stream = None
 
             # when exiting, save the voiced region for sample
@@ -78,27 +77,16 @@ class AudioStream(Audio):
         self.audio_data = np.append(self.audio_data, indata)
         # calculate
         self.handle_calculation(indata=indata)
-        # store dict for message
-        self.store_message_values(average_rms=self.average_rms, average_rms_db=self.average_rms_db,
-                                  std_rms_db=self.std_rms_db, average_f0=self.average_f0)
-
-        try:
-            # send message after checking initialization
-            if self.zeromq_sender.is_initialized:
-                message = self.zeromq_sender.snake_to_camel(data_dict=self.message_dict)
-                self.zeromq_sender.set_message(
-                    data_dict=message)  # we need it because sending method is async one
-                # get ready and send simultaneously due to async one
-                self.zeromq_sender.is_sendable = True
-            else:
-                raise ZeroMQNotInitialized("Error before sending message")
-        except ZeroMQNotInitialized:
-            self.logger.logger.warn("ZeroMQ is not initialized, so message won't be sent.")
+        # store dict for message, and will be converted to proper types
+        self.store_message_values(message_data=self.message_data)
+        # send data for each callback
+        self.handle_sending()
+        print(self.message_data)
 
     def audio_callback_raw(self, indata, frames: int, time, status):
         pass
 
-    def handle_calculation(self, indata: np.ndarray = None):
+    def handle_calculation(self, indata: np.ndarray = None) -> None:
         """
         This class specifies calculation for each callback (i.e., for each block)
         Args:
@@ -109,6 +97,7 @@ class AudioStream(Audio):
         vad_generator = self.audio_calculator.vad_generator(audio_data=indata,
                                                             max_dur_sec=self.CHUNK_DURATION_MS / 1000)
 
+        voiced_time_ms: float = 0.0
         rms: np.ndarray = np.array([])
         rms_db: np.ndarray = np.array([])
         f0 = np.array([])
@@ -124,6 +113,9 @@ class AudioStream(Audio):
             # get values represented as np.ndarray
             voiced_audio_data: np.ndarray = self.audio_manipulator.int_to_float64(
                 audio_data=region.samples.astype("int16"))
+            # get voiced time in msec
+            # todo
+            # voiced_time_ms += region.millis[:]
             # calc stft
             is_freq, voiced_audio_data_freq = self.audio_calculator.calc_short_time_fourier_transform(
                 voiced_audio_data=voiced_audio_data,
@@ -138,29 +130,33 @@ class AudioStream(Audio):
             # calculate sound pressure level (SPL) with db
             rms_db = self.audio_calculator.calc_amplitude_to_db(audio_amplitude=np.abs(rms))
             # calculate f0
-            for f0_method in Profile.f0_estimation_methods:
-                if f0_method == "pYIN":
-                    f0, voiced_flag, _, times = self.audio_calculator.calc_f0_pyin(voiced_audio_data=voiced_audio_data)
-                elif f0_method == "DIO":
-                    pass
-                elif f0_method == "Harvest":
-                    f0 = self.audio_calculator.calc_f0_harvest(voiced_audio_data=voiced_audio_data,
-                                                               sample_rate=self.audio_manipulator.INPUT_SAMPLE_RATE)
+            f0_method = Profile.f0_estimation_methods
+            if f0_method == "pYIN":
+                f0, voiced_flag, _, times = self.audio_calculator.calc_f0_pyin(voiced_audio_data=voiced_audio_data)
+            elif f0_method == "DIO":
+                pass
+            elif f0_method == "Harvest":
+                f0 = self.audio_calculator.calc_f0_harvest(voiced_audio_data=voiced_audio_data,
+                                                           sample_rate=self.audio_manipulator.INPUT_SAMPLE_RATE)
             # store and concat values
             self.concat_values(region=region, rms=rms, rms_db=rms_db, f0=f0)
 
             # concat region info
             region_info += "\n#{} region: {}sec detected.".format(i, region.duration)
 
-        # calc features with overall data
+        # calc and update features with overall data
         if region_info != "":  # if the voiced region was not found
             self.logger.logger.info(region_info)
+            # Note: Each assignation will update `Audio.message_data[key]`
+            self.total_voiced_time_ms += voiced_time_ms
             # calc average of rms
             self.average_rms = self.audio_calculator.calc_mean(audio_data=rms)
             # calc average of rms_db
             self.average_rms_db = self.audio_calculator.calc_mean(audio_data=rms_db)
             # calc std of rms_db
-            self.std_rms_db = self.audio_calculator.calc_standard_deviation(audio_data=rms_db)
+            self.std_rms_db = self.audio_calculator.calc_standard_deviation(audio_data=rms_db)  # std for each region
+            self.std_rms_db_total = self.audio_calculator.calc_standard_deviation(
+                audio_data=self.concat_rms_db)  # std for total voiced region
 
             # when getting NaN, `np.float64(0.0)` will be returned
             f0_avg_candidate = self.audio_calculator.calc_average_f0(f0=f0)
@@ -170,21 +166,21 @@ class AudioStream(Audio):
             else:  # otherwise, retain previous value
                 pass
 
-    def concat_values(self, region, rms, f0, rms_db):
+    def concat_values(self, region, rms, f0, rms_db) -> None:
         """
         Store values which is calculated and raw ones into fields.
         Returns:
         """
         # concat voiced regions
-        self.region_concat = region + self.region_concat
+        self.concat_region = region + self.concat_region
         # concat energy
-        self.region_concat_rms = np.append(self.region_concat_rms, rms)
+        self.concat_rms = np.append(self.concat_rms, rms)
         # concat spl
-        self.region_concat_rms_db = np.append(self.region_concat_rms_db, rms_db)
+        self.concat_rms_db = np.append(self.concat_rms_db, rms_db)
         # concat f0
-        self.region_concat_f0 = np.append(self.region_concat_f0, f0)
+        self.concat_f0 = np.append(self.concat_f0, f0)
 
-    def store_message_values(self, **kwargs):
+    def store_message_values(self, message_data: Dict[str, Any]) -> None:
         """
         Store values which is calculated and row ones into dictionary for message.
         In addition to that, the type of data will be converted into another one properly for the serialization.
@@ -192,18 +188,33 @@ class AudioStream(Audio):
             Currently, the parameters should be stored are following:
         """
         pattern = r".*?(numpy\.float)\d{2,3}.*"
-        for key in kwargs:
+        for key in message_data:
             # get matched data
-            res: Union[re.Match, None] = re.match(pattern, str(type(kwargs[key])))
+            res: Union[re.Match, None] = re.match(pattern, str(type(message_data[key])))
             # check if the data is valid for serialization
-            if res.group(1) == "numpy.float":  # if data type is not for serialization
-                # convert type for numpy into build-in one
-                serializable_value = kwargs[key].item()
-                # store
-                self.message_dict[key] = serializable_value
-            else:
+            if res is None:
                 # just store each value
-                self.message_dict[key] = kwargs[key]
+                self.message_data[key] = message_data[key]
+            elif res.group(1) == "numpy.float":  # if data type is not for serialization
+                # convert type of numpy into build-in one
+                serializable_value = message_data[key].item()
+                # store them for sending
+                self.message_data[key] = serializable_value
+
+    def handle_sending(self) -> None:
+        try:
+            # send message after checking initialization
+            if self.zeromq_sender.is_initialized:
+                # camelize before sending data
+                message = self.zeromq_sender.snake_to_camel(data_dict=self.message_data)
+                self.zeromq_sender.set_message(
+                    data_dict=message)  # we need it because sending method is async one
+                # get ready and send simultaneously due to async one
+                self.zeromq_sender.is_sendable = True
+            else:
+                raise ZeroMQNotInitialized("Error before sending message")
+        except ZeroMQNotInitialized:
+            self.logger.logger.warn("ZeroMQ is not initialized, so message won't be sent.")
 
     def get_input_stream_numpy(self) -> sd.InputStream:
         """
@@ -232,4 +243,4 @@ class AudioStream(Audio):
         Returns:
         """
         if Profile.is_writable:
-            self.audio_manipulator.save_wav_auditok(audio_region=self.region_concat)
+            self.audio_manipulator.save_wav_auditok(audio_region=self.concat_region)

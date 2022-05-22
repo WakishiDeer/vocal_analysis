@@ -9,7 +9,7 @@ class Profile:
     is_input_device_set = False
     is_init = True  # this is for `self.region_concat` to initialize
     is_writable = False  # for saving streaming audio
-    f0_estimation_methods: List[str] = ["pYIN", "DIO", "Harvest"]  # the way to estimate f0
+    f0_estimation_methods: str = "Harvest"  # the way to estimate f0
 
     @classmethod
     def set_args(cls, args):
