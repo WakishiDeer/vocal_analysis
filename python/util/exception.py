@@ -31,3 +31,8 @@ class ZeroMQNotInitialized(Exception):
 class GotNanException(Exception):
     def __init__(self, message):
         super(GotNanException, self).__init__(message)
+
+
+class IncorrectChannelNumberException(Exception):
+    def __init__(self, message):
+        super(IncorrectChannelNumberException, self).__init__(message)
