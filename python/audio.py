@@ -17,20 +17,22 @@ class Audio:
 
         # fields
         self._audio_data: np.ndarray = np.array([])  # overall audio data
-        self._total_voiced_time_ms: float = 0.0
         self.current_audio_data = None
-        self._f0 = None
+        self._total_voiced_region_num: int = 0
+        self._total_voiced_time_ms: float = 0.0
         self._average_rms: np.float64 = np.float64()
         self._average_rms_db: np.float64 = np.float64()  # for each region
         self._average_rms_db_total: np.float64 = np.float64()  # total (from the beginning to present)
         self._std_rms_db: np.float64 = np.float64()  # for each region
         self._std_rms_db_total: np.float64 = np.float64()  # total (from the beginning to present)
+        self._f0 = None
         self._average_f0: np.float64 = np.float64()
         self._std_f0: np.float64 = np.float64()
 
         # dict for send
         self.message_data: Dict[str, float] = {
             "t": .0,
+            "total_voiced_region_num": self._total_voiced_region_num,
             "total_voiced_time_ms": self._total_voiced_time_ms,
             "average_rms": self._average_rms,
             "average_rms_db": self._average_rms_db,
@@ -44,6 +46,10 @@ class Audio:
     @property
     def audio_data(self):
         return self._audio_data
+
+    @property
+    def total_voiced_region_num(self):
+        return self._total_voiced_region_num
 
     @property
     def total_voiced_time_ms(self):
@@ -84,6 +90,12 @@ class Audio:
     @audio_data.setter
     def audio_data(self, data):
         self._audio_data = data
+
+    @total_voiced_region_num.setter
+    def total_voiced_region_num(self, data):
+        # set data into message simultaneously
+        self.message_data["total_voiced_region_num"] = data
+        self._total_voiced_region_num = data
 
     @total_voiced_time_ms.setter
     def total_voiced_time_ms(self, data):

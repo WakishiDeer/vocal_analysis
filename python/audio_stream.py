@@ -96,6 +96,7 @@ class AudioStream(Audio):
         vad_generator = self.audio_calculator.vad_generator(audio_data=indata,
                                                             max_dur_sec=self.CHUNK_DURATION_MS / 1000)
 
+        region_num: int = 0
         voiced_time_ms: float = 0.0
         rms: np.ndarray = np.array([])
         rms_db: np.ndarray = np.array([])
@@ -104,6 +105,7 @@ class AudioStream(Audio):
 
         # calculation for each voiced region
         for i, region in enumerate(vad_generator):
+            region_num += 1
             # to save the region
             if Profile.is_init:
                 Profile.is_writable = True
@@ -146,9 +148,12 @@ class AudioStream(Audio):
             region_info += "\n#{} region: {}sec detected.".format(i, region.duration)
 
         # calc and update features with overall data
-        if region_info != "":  # if the voiced region was not found
+        if region_num > 0:  # if the voiced region was found
             self.logger.logger.info(region_info)
             # Note: Each assignation will update `Audio.message_data[key]`
+            # update number of detected region
+            self.total_voiced_region_num += region_num
+            # update total voiced time
             self.total_voiced_time_ms += voiced_time_ms
             # calc average of rms
             self.average_rms = self.audio_calculator.calc_mean(audio_data=rms)
