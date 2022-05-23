@@ -153,7 +153,9 @@ class AudioStream(Audio):
             # calc average of rms
             self.average_rms = self.audio_calculator.calc_mean(audio_data=rms)
             # calc average of rms_db
-            self.average_rms_db = self.audio_calculator.calc_mean(audio_data=rms_db)
+            self.average_rms_db = self.audio_calculator.calc_mean(audio_data=rms_db)  # mean for each region
+            self.average_rms_db_total = self.audio_calculator.calc_mean(
+                audio_data=self.concat_rms_db)  # mean for total voiced region
             # calc std of rms_db
             self.std_rms_db = self.audio_calculator.calc_standard_deviation(audio_data=rms_db)  # std for each region
             self.std_rms_db_total = self.audio_calculator.calc_standard_deviation(

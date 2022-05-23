@@ -21,9 +21,10 @@ class Audio:
         self.current_audio_data = None
         self._f0 = None
         self._average_rms: np.float64 = np.float64()
-        self._average_rms_db: np.float64 = np.float64()
+        self._average_rms_db: np.float64 = np.float64()  # for each region
+        self._average_rms_db_total: np.float64 = np.float64()  # total (from the beginning to present)
         self._std_rms_db: np.float64 = np.float64()  # for each region
-        self._std_rms_db_total: np.float64 = np.float64()
+        self._std_rms_db_total: np.float64 = np.float64()  # total (from the beginning to present)
         self._average_f0: np.float64 = np.float64()
         self._std_f0: np.float64 = np.float64()
 
@@ -33,6 +34,7 @@ class Audio:
             "total_voiced_time_ms": self._total_voiced_time_ms,
             "average_rms": self._average_rms,
             "average_rms_db": self._average_rms_db,
+            "average_rms_db_total": self._average_rms_db_total,
             "std_rms_db": self._std_rms_db,
             "std_rms_db_total": self._std_rms_db_total,
             "average_f0": self._average_f0,
@@ -58,6 +60,10 @@ class Audio:
     @property
     def average_rms_db(self):
         return self._average_rms_db
+
+    @property
+    def average_rms_db_total(self):
+        return self._average_rms_db_total
 
     @property
     def std_rms_db(self):
@@ -100,6 +106,12 @@ class Audio:
         # set data into message simultaneously
         self.message_data["average_rms_db"] = data
         self._average_rms_db = data
+
+    @average_rms_db_total.setter
+    def average_rms_db_total(self, data):
+        # set data into message simultaneously
+        self.message_data["average_rms_db_total"] = data
+        self._average_rms_db_total = data
 
     @std_rms_db.setter
     def std_rms_db(self, data):
