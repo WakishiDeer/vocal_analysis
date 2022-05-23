@@ -1,5 +1,6 @@
 import json
 from typing import Dict, Any
+import pprint
 
 import zmq
 from zmq.asyncio import Context
@@ -49,6 +50,7 @@ class ZeroMQSender:
         while True:
             if self.is_sendable:
                 # `self.message_dict` will be updated
+                pprint.pprint(self.message_dict)
                 await self.socket.send_multipart([json.dumps(self.message_dict).encode("ascii")])
                 self.is_sendable = False
 

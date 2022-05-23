@@ -46,6 +46,8 @@ class Main:
                                default=False)
         parser.add_argument("-d", "--down_input_sample_rate", help="set input sample rate as 16000",
                             action="store_true", default=False)
+        parser.add_argument("-D", "--default_input_device", help="use default input device", action="store_true",
+                            default=False)
         # parsing
         return parser.parse_args()
 

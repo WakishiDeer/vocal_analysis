@@ -81,7 +81,6 @@ class AudioStream(Audio):
         self.store_message_values(message_data=self.message_data)
         # send data for each callback
         self.handle_sending()
-        print(self.message_data)
 
     def audio_callback_raw(self, indata, frames: int, time, status):
         pass
@@ -114,8 +113,10 @@ class AudioStream(Audio):
             voiced_audio_data: np.ndarray = self.audio_manipulator.int_to_float64(
                 audio_data=region.samples.astype("int16"))
             # get voiced time in msec
-            # todo
-            # voiced_time_ms += region.millis[:]
+            voiced_time_ms += self.audio_calculator. \
+                calc_samples_to_time(audio_data=voiced_audio_data,
+                                     sample_rate=self.audio_manipulator.INPUT_SAMPLE_RATE)
+            print(voiced_time_ms)
             # calc stft
             is_freq, voiced_audio_data_freq = self.audio_calculator.calc_short_time_fourier_transform(
                 voiced_audio_data=voiced_audio_data,
@@ -160,11 +161,12 @@ class AudioStream(Audio):
 
             # when getting NaN, `np.float64(0.0)` will be returned
             f0_avg_candidate = self.audio_calculator.calc_average_f0(f0=f0)
-            # check if f0 average is valid (NaN) or not
+            f0_std_candidate = self.audio_calculator.calc_standard_deviation_f0(f0=f0)
+            # check if f0 [average | std] are valid (NaN) or not
             if f0_avg_candidate != np.float64(0.0):
                 self.average_f0 = f0_avg_candidate
-            else:  # otherwise, retain previous value
-                pass
+            if f0_std_candidate != np.float64(0.0):
+                self.std_f0 = f0_std_candidate
 
     def concat_values(self, region, rms, f0, rms_db) -> None:
         """

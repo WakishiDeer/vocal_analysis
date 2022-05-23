@@ -25,6 +25,7 @@ class Audio:
         self._std_rms_db: np.float64 = np.float64()  # for each region
         self._std_rms_db_total: np.float64 = np.float64()
         self._average_f0: np.float64 = np.float64()
+        self._std_f0: np.float64 = np.float64()
 
         # dict for send
         self.message_data: Dict[str, float] = {
@@ -34,7 +35,8 @@ class Audio:
             "average_rms_db": self._average_rms_db,
             "std_rms_db": self._std_rms_db,
             "std_rms_db_total": self._std_rms_db_total,
-            "average_f0": self._average_f0
+            "average_f0": self._average_f0,
+            "std_f0": self._std_f0,
         }
 
     @property
@@ -62,12 +64,16 @@ class Audio:
         return self._std_rms_db
 
     @property
+    def std_rms_db_total(self):
+        return self._std_rms_db_total
+
+    @property
     def average_f0(self):
         return self._average_f0
 
     @property
-    def std_rms_db_total(self):
-        return self._std_rms_db_total
+    def std_f0(self):
+        return self._std_f0
 
     @audio_data.setter
     def audio_data(self, data):
@@ -112,3 +118,9 @@ class Audio:
         # set data into message simultaneously
         self.message_data["average_f0"] = data
         self._average_f0 = data
+
+    @std_f0.setter
+    def std_f0(self, data):
+        # set data into message simultaneously
+        self.message_data["std_f0"] = data
+        self._std_f0 = data

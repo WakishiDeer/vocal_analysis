@@ -1,5 +1,8 @@
+from numpy import float_, ndarray
+
 from util.logger import Logger
 from util.exception import GotNanException
+from util.exception import IncorrectChannelNumberException
 
 from typing import Union
 
@@ -55,8 +58,25 @@ class AudioCalculator:
         )
         return res
 
-    # def calc_samples_to_time(self, audio_data: np.ndarray, sample_rate: int = 16000) -> float:
-    #     return audio_data.size / float(sample_rate)
+    def calc_samples_to_time(self, audio_data: np.ndarray, sample_rate: int = 16000) -> float:
+        """
+        Calculate time of voiced data in milli second.
+        Args:
+            audio_data:
+            sample_rate:
+
+        Returns:
+
+        """
+        try:
+            if audio_data.ndim != 1:
+                raise IncorrectChannelNumberException(
+                    "Got incorrect number of channels when calculating audio time conversion.")
+        except IncorrectChannelNumberException:
+            self.logger.logger.exception("Multichannel is not supported in this method.")
+        else:
+            res = (audio_data.size / float(sample_rate)) * 10 ** 3  # in milli sec
+            return res
 
     def calc_short_time_fourier_transform(self, voiced_audio_data: np.ndarray = None, n_fft=512,
                                           hop_length: int = 512 // 4):
@@ -192,20 +212,38 @@ class AudioCalculator:
         f0 = pw.stonemask(x=voiced_audio_data, temporal_positions=temporal_positions, f0=_f0, fs=sample_rate)
         return f0
 
-    def calc_average_f0(self, f0: np.ndarray = np.array([])) -> np.float64:
+    def calc_average_f0(self, f0: np.ndarray = np.array([])) -> float_ | ndarray:
         """
         Calculate average of f0 for given array of f0 values.
         Notes:
             In this function, `np.nan` will be ignored when calculating mean.
         """
+        # convert 0.0 into NaN
+        f0[f0 == 0.0] = np.nan
+        # avoid NaN when calculating
+        f0_avg = np.nanmean(f0, dtype=np.float64)
         try:
-            # convert 0.0 into NaN
-            f0[f0 == 0.0] = np.nan
-            # avoid NaN when calculating
-            f0_avg = np.nanmean(f0, dtype=np.float64)
             if np.isnan(f0_avg):
                 raise GotNanException("Error when calculating average of f0")
         except GotNanException:
             self.logger.logger.warn("Got value of `nan` when calculating average of f0.")
             return np.float64(0.0)
         return f0_avg
+
+    def calc_standard_deviation_f0(self, f0: np.ndarray = np.array([])) -> float_ | ndarray:
+        """
+        Calculate average of f0 for given array of f0 values.
+        Notes:
+            In this function, `np.nan` will be ignored when calculating mean.
+        """
+        # convert 0.0 into NaN
+        f0[f0 == 0.0] = np.nan
+        # avoid NaN when calculating
+        f0_std = np.nanstd(f0, dtype=np.float64)
+        try:
+            if np.isnan(f0_std):
+                raise GotNanException("Error when calculating average of f0")
+        except GotNanException:
+            self.logger.logger.warn("Got value of `nan` when calculating average of f0.")
+            return np.float64(0.0)
+        return f0_std
