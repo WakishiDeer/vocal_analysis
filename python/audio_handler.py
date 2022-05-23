@@ -34,25 +34,6 @@ class AudioHandler:
     def audio_stream(self):
         return self._audio_stream
 
-    def update_plot(self, frame):
-        """
-        This is called for each plot update.
-        Args:
-            frame:
-        Returns:
-        """
-        while True:
-            try:
-                data = self.audio_stream.buffer.get_nowait()
-            except queue.Empty:
-                break
-            shift = len(data)
-            self.plot_data = np.roll(self.plot_data, -shift, axis=0)
-            self.plot_data[-shift:, :] = data
-        for column, line in enumerate(self.lines):
-            line.set_ydata(self.plot_data[:, column])
-        return self.lines
-
     def start_input(self, is_buffer=False):
         """
         This method just input and does not plot anything.
@@ -94,6 +75,25 @@ class AudioHandler:
         ani = FuncAnimation(fig, self.update_plot, interval=self.interval, blit=True)
         with self.audio_stream.stream:
             plt.show()
+
+    def update_plot(self, frame):
+        """
+        This is called for each plot update.
+        Args:
+            frame:
+        Returns:
+        """
+        while True:
+            try:
+                data = self.audio_stream.buffer.get_nowait()
+            except queue.Empty:
+                break
+            shift = len(data)
+            self.plot_data = np.roll(self.plot_data, -shift, axis=0)
+            self.plot_data[-shift:, :] = data
+        for column, line in enumerate(self.lines):
+            line.set_ydata(self.plot_data[:, column])
+        return self.lines
 
     def start_plot_f0(self):
         """

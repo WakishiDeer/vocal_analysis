@@ -53,7 +53,8 @@ class Main:
 
     def start_mode(self):
         # firstly, set input device
-        self.audio_manipulator.set_input_device()
+        self.audio_manipulator.set_input_device(use_default=Profile.args.default_input_device)
+
         # execute according process
         if Profile.args.available_device:
             pass

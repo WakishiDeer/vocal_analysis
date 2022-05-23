@@ -1,4 +1,5 @@
 import re
+import pprint
 from typing import Union
 import numpy as np
 import auditok
@@ -21,7 +22,7 @@ class AudioManipulator:
         # for audio_util device setting
         import re
         self.pattern = re.compile("\\S+")
-        self.INPUT_SAMPLE_RATE = None  # input samplerate of the device (can be down sampled)
+        self.INPUT_SAMPLE_RATE: int = 16000  # input samplerate of the device (can be down sampled)
 
     def get_devices(self):
         # session for listing audio_util device
@@ -34,6 +35,15 @@ class AudioManipulator:
         if len(devices) > 0:
             is_exist = True
         return is_exist
+
+    def find_device_index(self, device_candidate: str = "", devices: sd.DeviceList = None) -> int:
+        """
+        Find and return device index from device name.
+        """
+        for index, device in enumerate(devices):
+            # matched or not
+            if device['name'] == device_candidate:
+                return index
 
     def input_device_interactively(self):
         # session for interactive input
@@ -61,62 +71,74 @@ class AudioManipulator:
                     break
             return is_found
 
-    def set_default(self, device_index: int, devices: sd.DeviceList):
+    def set_default(self, use_default: bool = False, device_index: int = 0,
+                    devices: sd.DeviceList = None):
         """
         Set default of sound device.
         Notes:
             Output parameters won't be changed in this method.
         Args:
+            use_default:
             device_index:
             devices:
         Returns:
         """
         # default setting for sounddevice
         sd.default.device = (device_index, sd.default.device[1])
+
         # set reduced sample rate or default one
         if Profile.args.down_input_sample_rate:
             sd.default.samplerate = 16000
         else:
             sd.default.samplerate = devices[device_index]['default_samplerate']
-        # set input channel
+
+        # set input channel: (input_channels, output_channels)
         sd.default.channels = (1, devices[device_index]['max_output_channels'])
         # default setting for fields
         self.INPUT_SAMPLE_RATE = sd.default.samplerate
 
-    def set_input_device(self):
+    def set_input_device(self, use_default: bool = False) -> bool:
         """
         Select input device interactively.
+        Args:
+            use_default (bool): To use default input device without selecting.
         Returns:
+            success (bool): Successfully set device or not
         """
-        # display devices on terminal
-        global device_candidate
+        device_candidate: str = "0"
+        device_index: int = 0
+        is_success: bool
         devices, input_device = self.get_devices()
-        import pprint
-        pprint.pprint(devices)  # show all devices (includes both input and output ones)
-        pprint.pprint(input_device)  # show only selected input device
 
+        # manually set
         try:
             # exit if not input device exist, otherwise proceed
             is_exist = self.is_device_exist(devices=devices)
             if not is_exist:  # raise error when there is no available device
                 raise NoInputDeviceException("Error on selecting device.")
 
+            # use default mode or not
+            if use_default:
+                pprint.pprint(input_device)  # show only selected input device
+                device_index = self.find_device_index(device_candidate=input_device["name"], devices=devices)
+                self.set_default(use_default=True, device_index=device_index, devices=devices)
+                # successfully set
+                Profile.is_input_device_set = True
+                is_success = True
+                return is_success
+
+            pprint.pprint(devices)  # show all devices (includes both input and output ones)
             # user will input `input device`
             device_candidate = self.input_device_interactively()
             # check if input name or index is matched or not
             is_matched = self.is_device_matched(device_candidate=device_candidate, devices=devices)
-            if is_matched:  # set default input device (output one won't be changed)
-                device_index = 0
-                if device_candidate.isdecimal():  # when numerical value
-                    device_index = int(device_candidate)
-                    self.set_default(device_index=device_index, devices=devices)
-                else:  # when string
-                    # todo implement
-                    pass
-                Profile.is_input_device_set = True
-                self.logger.logger.info("Successfully set default device.")
-            else:
+            if not is_matched:  # set default input device (output one won't be changed)
                 raise InputDeviceNotFoundException("Error on selecting device.")
+            if device_candidate.isdecimal():  # when numerical value
+                self.set_default(use_default=False, device_index=int(device_candidate), devices=devices)
+            else:  # when string
+                device_index = self.find_device_index(device_candidate=device_candidate, devices=devices)
+                self.set_default(use_default=False, device_index=device_index, devices=devices)
 
         except NoInputDeviceException:
             self.logger.logger.exception("On device selecting, it seems there is no available audio_util device.")
@@ -125,6 +147,14 @@ class AudioManipulator:
 
         except InputDeviceNotFoundException:
             self.logger.logger.exception("On device selecting, {} does not matched.".format(device_candidate))
+            is_success = False
+            return is_success
+
+        else:  # success
+            Profile.is_input_device_set = True
+            self.logger.logger.info("Successfully set default device.")
+            is_success = True
+            return is_success
 
     def int_to_float64(self, audio_data: np.ndarray = None):
         pattern = r"(float)\d{2,3}"
